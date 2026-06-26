@@ -913,6 +913,66 @@ async function startRealTimeCrypto() {
 // สั่งให้ระบบวิ่งไปดึงข้อมูลใหม่ทุกๆ 5 วินาที
 setInterval(startRealTimeCrypto, 3000);
 startRealTimeCrypto(); // ทำงานทันทีที่เปิดเว็บ
+
+  // ── REAL-TIME STOCK ENGINE (FINNHUB) ──
+async function startRealTimeStocks() {
+  // 1. นำ API Key ของ Finnhub ที่คุณได้มา ใส่ในเครื่องหมายคำพูดด้านล่างนี้
+  const apiKey = 'ใส่_API_KEY_ของคุณตรงนี้'; 
+  
+  // 2. ใส่ Ticker ที่ต้องการดึง (ตรงกับที่มีใน Ticker Bar และ Market Overview)
+  const symbols = ['QQQ', 'VOO', 'NVDA', 'MSFT', 'META', 'TSM', 'AVUV', 'INDA'];
+
+  for (const sym of symbols) {
+    try {
+      const url = `https://finnhub.io/api/v1/quote?symbol=${sym}&token=${apiKey}`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      // Finnhub จะคืนค่า c = Current Price และ dp = Percent Change
+      if (data && data.c) {
+        const price = parseFloat(data.c);
+        const chg = parseFloat(data.dp);
+
+        const priceStr = '$' + price.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+        const chgStr = (chg > 0 ? '+' : '') + chg.toFixed(2) + '%';
+        const colorClass = chg >= 0 ? 'g' : 'r';
+        const colorVar = chg >= 0 ? 'var(--green)' : 'var(--red)';
+
+        // 1. อัปเดต Ticker Bar
+        document.querySelectorAll('.tc').forEach(tc => {
+          if(tc.querySelector('.s').textContent === sym) {
+            const valEl = tc.querySelector('.v');
+            valEl.textContent = priceStr;
+            valEl.style.color = colorVar;
+            setTimeout(() => valEl.style.color = '', 800); // เอฟเฟกต์กระพริบ
+            
+            tc.querySelector('.c').textContent = chgStr;
+            tc.querySelector('.c').className = 'c ' + colorClass;
+          }
+        });
+
+        // 2. อัปเดตหน้า Market Overview
+        document.querySelectorAll('.mkt-c').forEach(mc => {
+          if(mc.querySelector('.mkt-s').textContent === sym) {
+            mc.querySelector('.mkt-p').textContent = priceStr;
+            mc.querySelector('.mkt-p').className = 'mkt-p ' + colorClass;
+            mc.querySelector('.mkt-chg').textContent = chgStr;
+            mc.querySelector('.mkt-chg').className = 'mkt-chg ' + colorClass;
+          }
+        });
+      }
+    } catch(e) {
+      console.error(`ASA Data Error for ${sym}:`, e);
+    }
+    
+    // หน่วงเวลา 250 มิลลิวินาทีระหว่างการดึงหุ้นแต่ละตัว เพื่อป้องกัน Finnhub แบน (Rate Limit)
+    await new Promise(resolve => setTimeout(resolve, 250));
+  }
+}
+
+// สั่งให้ระบบวิ่งไปดึงข้อมูลหุ้นใหม่ทุกๆ 1 นาที (เพื่อรักษาโควต้า API ฟรี)
+setInterval(startRealTimeStocks, 60000);
+startRealTimeStocks(); // ทำงานทันทีที่เปิดเว็บ
 </script>
 </body>
 </html>
