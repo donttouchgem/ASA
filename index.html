@@ -846,6 +846,73 @@ function runBT(){
   });
 }
 runBT();
+  // ── REAL-TIME CRYPTO ENGINE (BINANCE) ──
+async function startRealTimeCrypto() {
+  // ใส่ Ticker เหรียญที่ต้องการดึงข้อมูล
+  const symbols = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"];
+  const url = `https://api.binance.com/api/v3/ticker/24hr?symbols=${JSON.stringify(symbols)}`;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    data.forEach(coin => {
+      const sym = coin.symbol.replace('USDT', '');
+      const price = parseFloat(coin.lastPrice);
+      const chg = parseFloat(coin.priceChangePercent);
+      
+      // จัดรูปแบบตัวเลข
+      const priceStr = '$' + price.toLocaleString('en-US', {minimumFractionDigits: sym==='XRP'?4:2, maximumFractionDigits: sym==='XRP'?4:2});
+      const chgStr = (chg > 0 ? '+' : '') + chg.toFixed(2) + '%';
+      const colorClass = chg >= 0 ? 'g' : 'r';
+      const colorVar = chg >= 0 ? 'var(--green)' : 'var(--red)';
+
+      // 1. อัปเดต Ticker Bar ด้านบน
+      document.querySelectorAll('.tc').forEach(tc => {
+        if(tc.querySelector('.s').textContent === sym) {
+          const valEl = tc.querySelector('.v');
+          valEl.textContent = priceStr;
+          // ใส่ Effect กระพริบเวลาราคาขยับ
+          valEl.style.color = colorVar; 
+          setTimeout(() => valEl.style.color = '', 800);
+          
+          tc.querySelector('.c').textContent = chgStr;
+          tc.querySelector('.c').className = 'c ' + colorClass;
+        }
+      });
+
+      // 2. อัปเดตหน้า Market Overview
+      document.querySelectorAll('.mkt-c').forEach(mc => {
+        if(mc.querySelector('.mkt-s').textContent === sym) {
+          mc.querySelector('.mkt-p').textContent = priceStr;
+          mc.querySelector('.mkt-p').className = 'mkt-p ' + colorClass;
+          mc.querySelector('.mkt-chg').textContent = chgStr;
+          mc.querySelector('.mkt-chg').className = 'mkt-chg ' + colorClass;
+        }
+      });
+
+      // 3. อัปเดตหน้า Crypto Screener (การ์ด)
+      document.querySelectorAll('.cc').forEach(cc => {
+        if(cc.querySelector('.cc-sym').textContent === sym) {
+          cc.querySelector('.cc-price').textContent = priceStr;
+          cc.querySelector('.cc-price').className = 'cc-price ' + colorClass;
+          
+          const mnEls = cc.querySelectorAll('.mn');
+          if(mnEls.length > 0) {
+            mnEls[0].textContent = chgStr;
+            mnEls[0].className = 'mn ' + colorClass;
+          }
+        }
+      });
+    });
+  } catch(e) {
+    console.error("ASA Real-time Data Error:", e);
+  }
+}
+
+// สั่งให้ระบบวิ่งไปดึงข้อมูลใหม่ทุกๆ 5 วินาที
+setInterval(startRealTimeCrypto, 5000);
+startRealTimeCrypto(); // ทำงานทันทีที่เปิดเว็บ
 </script>
 </body>
 </html>
