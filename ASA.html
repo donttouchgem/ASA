@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ASA — Algorithmic Strategy Advisor</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap');
+:root{
+  --bg:#090909;--s1:#101010;--s2:#161616;--s3:#1c1c1c;
+  --b1:rgba(255,255,255,0.06);--b2:rgba(255,255,255,0.11);
+  --txt:#f0f0f0;--m1:#555;--m2:#888;
+  --green:#00d68f;--gd:rgba(0,214,143,0.1);--gb:rgba(0,214,143,0.2);
+  --red:#ff4d4d;--rd:rgba(255,77,77,0.1);
+  --amber:#f5a623;--ad:rgba(245,166,35,0.1);
+  --purple:#8b7fff;--pd:rgba(139,127,255,0.1);
+  --blue:#4da6ff;--bd:rgba(77,166,255,0.1);
+  --mono:'JetBrains Mono',monospace;--sans:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:13px;min-height:100vh;display:grid;grid-template-rows:52px 40px 1fr}
+
+/* TOPBAR */
+.topbar{display:flex;align-items:center;gap:10px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--b1)}
+.logo{font-family:var(--mono);font-size:15px;font-weight:700;letter-spacing:0.12em;color:var(--txt)}
+.logo em{color:var(--green);font-style:normal}
+.live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 8px var(--green);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.live-lbl{font-family:var(--mono);font-size:9px;color:var(--green);letter-spacing:.12em}
+.tr{margin-left:auto;display:flex;align-items:center;gap:12px}
+.badge{font-size:10px;padding:3px 8px;border-radius:4px;font-family:var(--mono)}
+.badge-tv{background:var(--bd);color:var(--blue);border:1px solid rgba(77,166,255,.2)}
+.badge-asa{background:var(--pd);color:var(--purple);border:1px solid rgba(139,127,255,.2)}
+.clk{font-family:var(--mono);font-size:11px;color:var(--m2)}
+
+/* TICKER BAR */
+.ticker-bar{display:flex;gap:6px;padding:0 20px;background:var(--s1);border-bottom:1px solid var(--b1);align-items:center;overflow-x:auto}
+.tc{display:flex;align-items:center;gap:6px;padding:6px 10px;border-radius:6px;white-space:nowrap;flex-shrink:0}
+.tc .s{font-family:var(--mono);font-size:10px;color:var(--m2)}
+.tc .v{font-family:var(--mono);font-size:11px;font-weight:600}
+.tc .c{font-family:var(--mono);font-size:9px}
+
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:200px 1fr;height:calc(100vh - 92px)}
+
+/* SIDEBAR */
+.sidebar{background:var(--s1);border-right:1px solid var(--b1);padding:16px 0;overflow-y:auto}
+.nav-sec{padding:0 12px;margin-bottom:20px}
+.nav-lbl{font-size:9px;font-weight:600;color:var(--m1);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;padding:0 4px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;cursor:pointer;font-size:12px;color:var(--m2);transition:all .15s;margin-bottom:1px;border:1px solid transparent;user-select:none}
+.nav-item:hover{background:var(--s2);color:var(--txt)}
+.nav-item.active{background:var(--gd);color:var(--green);border-color:var(--gb)}
+.nav-item svg{width:14px;height:14px;flex-shrink:0;opacity:.7}
+.nav-item.active svg{opacity:1}
+.nbadge{margin-left:auto;font-family:var(--mono);font-size:9px;background:var(--s2);padding:2px 5px;border-radius:3px;color:var(--m2)}
+
+/* MAIN */
+.main{overflow-y:auto;padding:18px}
+.page{display:none}.page.active{display:block}
+
+/* PAGE HEADER */
+.ph{margin-bottom:16px}
+.ph h2{font-size:18px;font-weight:600;margin-bottom:3px}
+.ph p{font-size:12px;color:var(--m2)}
+
+/* CARDS */
+.card{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px}
+.card+.card{margin-top:12px}
+.card-title{font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;font-weight:600}
+
+/* KPI */
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px}
+.kpi{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px 14px}
+.kpi-l{font-size:9px;color:var(--m1);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
+.kpi-v{font-family:var(--mono);font-size:18px;font-weight:500;line-height:1}
+.kpi-s{font-size:10px;color:var(--m2);margin-top:3px}
+
+/* PORTFOLIO TABLE */
+.pt-wrap{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.pt-head{display:grid;grid-template-columns:64px 1fr 88px 80px 80px 70px 70px;padding:8px 16px;border-bottom:1px solid var(--b1)}
+.pt-head span{font-size:9px;color:var(--m1);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.pt-head span:not(:first-child):not(:nth-child(2)){text-align:right}
+.pt-row{display:grid;grid-template-columns:64px 1fr 88px 80px 80px 70px 70px;padding:11px 16px;border-bottom:1px solid var(--b1);align-items:center;transition:background .1s}
+.pt-row:hover{background:var(--s2)}
+.pt-row:last-child{border-bottom:none}
+.pt-row>*:not(:first-child):not(:nth-child(2)){text-align:right}
+.sym{font-family:var(--mono);font-size:12px;font-weight:700}
+.wt-lbl{font-size:9px;color:var(--m1);margin-top:1px;font-family:var(--mono)}
+.co{font-size:11px;color:var(--m2);margin-top:1px}
+.mn{font-family:var(--mono)}
+.pill{display:inline-block;font-family:var(--mono);font-size:9px;font-weight:600;padding:2px 7px;border-radius:4px;border:1px solid}
+.p-buy{color:var(--green);background:var(--gd);border-color:var(--gb)}
+.p-hold{color:var(--amber);background:var(--ad);border-color:rgba(245,166,35,.3)}
+.p-watch{color:var(--purple);background:var(--pd);border-color:rgba(139,127,255,.3)}
+.p-sell{color:var(--red);background:var(--rd);border-color:rgba(255,77,77,.3)}
+
+/* SCORE BAR */
+.sb{display:flex;align-items:center;gap:5px}
+.sb-bg{flex:1;height:3px;background:var(--b2);border-radius:2px;overflow:hidden}
+.sb-fill{height:100%;border-radius:2px}
+.sb-n{font-family:var(--mono);font-size:10px;width:22px;text-align:right;flex-shrink:0}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 300px;gap:12px;margin-bottom:14px}
+
+/* FACTOR GRID */
+.fg{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--b1);margin-bottom:14px}
+.fc{background:var(--s1);padding:12px 14px}
+.fc-l{font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.fc-v{font-family:var(--mono);font-size:18px;font-weight:500}
+.fc-b{height:2px;border-radius:2px;margin-top:6px;overflow:hidden;background:var(--b1)}
+.fc-f{height:100%;border-radius:2px;transition:width .8s ease}
+
+/* SEARCH */
+.s-wrap{position:relative;margin-bottom:14px}
+.s-input{width:100%;background:var(--s1);border:1px solid var(--b2);border-radius:8px;padding:10px 14px 10px 38px;font-family:var(--mono);font-size:13px;color:var(--txt);outline:none;transition:border-color .2s}
+.s-input:focus{border-color:var(--green)}
+.s-input::placeholder{color:var(--m1)}
+.s-ico{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--m2);font-size:15px}
+.s-btn{position:absolute;right:6px;top:50%;transform:translateY(-50%);background:var(--green);color:#000;border:none;padding:5px 14px;border-radius:6px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);transition:opacity .15s}
+.s-btn:hover{opacity:.85}
+
+/* RESULT PANEL */
+.rp{background:var(--s1);border:1px solid var(--b2);border-radius:10px;overflow:hidden;margin-bottom:14px}
+.rp-head{display:flex;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--b1)}
+.ring{position:relative;width:56px;height:56px;flex-shrink:0}
+.ring svg{transform:rotate(-90deg)}
+.ring-num{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-family:var(--mono);font-size:14px;font-weight:700}
+.t-big{font-family:var(--mono);font-size:22px;font-weight:700}
+.t-co{font-size:12px;color:var(--m2);margin-top:2px}
+.p-right{margin-left:auto;text-align:right}
+.p-num{font-family:var(--mono);font-size:20px;font-weight:600}
+.p-chg{font-family:var(--mono);font-size:11px;margin-top:2px}
+.sigs{display:flex;gap:6px;flex-wrap:wrap;padding:12px 20px;border-top:1px solid var(--b1)}
+.sig{font-family:var(--mono);font-size:10px;padding:3px 8px;border-radius:5px;border:1px solid}
+.verdict-bar{display:flex;align-items:center;gap:12px;padding:12px 20px;background:var(--s2)}
+.vl{font-size:9px;color:var(--m1);text-transform:uppercase;letter-spacing:.08em}
+.vn{font-size:11px;color:var(--m2);margin-top:2px}
+.vb{font-family:var(--mono);font-size:13px;font-weight:700;padding:5px 16px;border-radius:6px;margin-left:auto}
+
+/* WATCHLIST */
+.wt{width:100%;border-collapse:collapse}
+.wt th{font-size:9px;color:var(--m1);text-transform:uppercase;letter-spacing:.06em;padding:8px 14px;text-align:left;border-bottom:1px solid var(--b1);font-weight:600}
+.wt td{padding:11px 14px;border-bottom:1px solid var(--b1);font-size:12px}
+.wt tr:hover td{background:var(--s2)}
+.wt tr:last-child td{border-bottom:none}
+
+/* PORT BUILDER */
+.pb-ctrl{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+.pi{background:var(--s1);border:1px solid var(--b2);border-radius:7px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--txt);outline:none}
+.pi:focus{border-color:var(--green)}
+.pi-t{width:100px}.pi-w{width:72px}.pi-n{width:170px;font-family:var(--sans)}
+.pb-btn{background:var(--gd);color:var(--green);border:1px solid var(--gb);padding:8px 16px;border-radius:7px;font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
+.pb-btn:hover{background:rgba(0,214,143,.18)}
+.pb-btn-sm{font-size:11px;color:var(--m2);background:none;border:1px solid var(--b1);padding:8px 12px;border-radius:7px;cursor:pointer}
+.pb-btn-blue{font-size:11px;color:var(--blue);background:var(--bd);border:1px solid rgba(77,166,255,.2);padding:8px 12px;border-radius:7px;cursor:pointer}
+.h-panel{background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden}
+.h-head{display:grid;grid-template-columns:72px 1fr 90px 70px 70px 36px;padding:8px 16px;border-bottom:1px solid var(--b1)}
+.h-head span{font-size:9px;color:var(--m1);text-transform:uppercase;letter-spacing:.06em;font-weight:600}
+.h-head span:not(:first-child):not(:nth-child(2)){text-align:right}
+.h-row{display:grid;grid-template-columns:72px 1fr 90px 70px 70px 36px;padding:11px 16px;border-bottom:1px solid var(--b1);align-items:center;transition:background .1s}
+.h-row:hover{background:var(--s2)}
+.h-row:last-child{border-bottom:none}
+.h-row>*:not(:first-child):not(:nth-child(2)){text-align:right}
+.rm{width:26px;height:26px;border-radius:5px;background:transparent;border:1px solid var(--b1);color:var(--m2);cursor:pointer;font-size:13px;display:flex;align-items:center;justify-content:center;margin-left:auto;transition:all .15s}
+.rm:hover{border-color:var(--red);color:var(--red);background:var(--rd)}
+.empty{padding:40px;text-align:center;color:var(--m1)}
+.empty .big{font-size:28px;margin-bottom:6px}
+.empty p{font-size:12px;line-height:1.6}
+
+/* LEGEND */
+.leg{margin-top:10px}
+.leg-i{display:flex;align-items:center;gap:7px;margin-bottom:6px}
+.leg-d{width:7px;height:7px;border-radius:2px;flex-shrink:0}
+.leg-n{font-size:11px;color:var(--txt);flex:1}
+.leg-p{font-family:var(--mono);font-size:10px;color:var(--m2)}
+
+/* BT */
+.bt-sl{background:var(--s1);border:1px solid var(--b1);border-radius:10px;padding:16px;margin-bottom:14px}
+.sl-row{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.sl-row:last-child{margin-bottom:0}
+.sl-lbl{font-size:11px;color:var(--m2);width:140px;flex-shrink:0}
+.sl-row input[type=range]{flex:1;accent-color:var(--green);cursor:pointer}
+.sl-val{font-family:var(--mono);font-size:12px;font-weight:600;color:var(--green);width:80px;text-align:right}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px}
+.stat{background:var(--s1);border:1px solid var(--b1);border-radius:8px;padding:12px}
+.stat-l{font-size:9px;color:var(--m2);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.stat-v{font-family:var(--mono);font-size:18px;font-weight:500}
+.stat-s{font-size:10px;color:var(--m2);margin-top:3px}
+
+/* CRYPTO */
+.cg{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px}
+.cc{background:var(--s1);border:1px solid var(--b1);border-radius:9px;padding:14px}
+.cc-sym{font-family:var(--mono);font-size:15px;font-weight:700;margin-bottom:2px}
+.cc-price{font-family:var(--mono);font-size:18px;font-weight:500;margin:5px 0}
+.cc-zone{font-size:10px;color:var(--m2);margin-top:5px}
+.cc-tgt{font-size:10px;margin-top:2px}
+
+/* ANALYSIS */
+.analysis-row{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--b1)}
+.analysis-row:last-child{border-bottom:none}
+.a-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0}
+.a-txt{font-size:12px;color:var(--m2);line-height:1.6}
+.a-txt strong{color:var(--txt);font-weight:500}
+
+.g{color:var(--green)}.r{color:var(--red)}.a{color:var(--amber)}.p{color:var(--purple)}.b{color:var(--blue)}
+::-webkit-scrollbar{width:3px;height:3px}
+::-webkit-scrollbar-thumb{background:var(--b2);border-radius:2px}
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{display:none}.fg{grid-template-columns:repeat(2,1fr)}.pt-head,.pt-row{grid-template-columns:60px 1fr 80px 70px}}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">A<em>S</em>A</div>
+  <div style="width:1px;height:20px;background:var(--b2)"></div>
+  <div class="live-dot"></div>
+  <div class="live-lbl">LIVE</div>
+  <div class="tr">
+    <div class="badge badge-asa">Algorithmic Strategy Advisor</div>
+    <div class="badge badge-tv">TradingView · Yahoo Finance</div>
+    <div class="clk" id="clk">--:--:--</div>
+  </div>
+</div>
+
+<!-- TICKER BAR -->
+<div class="ticker-bar">
+  <div class="tc"><span class="s">NVDA</span><span class="v">$199.00</span><span class="c r">-0.52%</span></div>
+  <div class="tc"><span class="s">MSFT</span><span class="v">$365.46</span><span class="c r">-2.27%</span></div>
+  <div class="tc"><span class="s">TSM</span><span class="v">$440.83</span><span class="c g">+1.02%</span></div>
+  <div class="tc"><span class="s">META</span><span class="v">$557.67</span><span class="c r">-0.81%</span></div>
+  <div class="tc"><span class="s">AVUV</span><span class="v">$123.17</span><span class="c g">+0.65%</span></div>
+  <div class="tc"><span class="s">INDA</span><span class="v">$49.63</span><span class="c g">+1.14%</span></div>
+  <div class="tc"><span class="s">BTC</span><span class="v">$58,000</span><span class="c r">-4.6%</span></div>
+  <div class="tc"><span class="s">ETH</span><span class="v">$1,618</span><span class="c r">-0.09%</span></div>
+  <div class="tc"><span class="s">VIX</span><span class="v">18.63</span><span class="c g">-4.41%</span></div>
+  <div class="tc"><span class="s">S&P500</span><span class="v">7,358</span><span class="c r">-0.10%</span></div>
+  <div class="tc"><span class="s">GOLD</span><span class="v">$365.92</span><span class="c r">-3.02%</span></div>
+</div>
+
+<div class="layout">
+<!-- SIDEBAR -->
+<nav class="sidebar">
+  <div class="nav-sec">
+    <div class="nav-lbl">Live Portfolio</div>
+    <div class="nav-item active" onclick="go('portfolio',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="4" width="14" height="10" rx="2"/><path d="M5 4V3a2 2 0 014 0v1"/></svg>
+      My Portfolio
+    </div>
+    <div class="nav-item" onclick="go('market',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 12L5 7l3 3 4-5 3 2"/></svg>
+      Market Overview
+    </div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Screener</div>
+    <div class="nav-item" onclick="go('screener',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="6" cy="6" r="4"/><path d="M10 10l3 3"/></svg>
+      Stock Screener
+    </div>
+    <div class="nav-item" onclick="go('crypto',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 1v14M5 4h4.5a2.5 2.5 0 010 5H5m0 0h5a2.5 2.5 0 010 5H5"/></svg>
+      Crypto Screener
+    </div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">Tools</div>
+    <div class="nav-item" onclick="go('builder',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 2v12M2 8h12"/></svg>
+      Portfolio Builder
+    </div>
+    <div class="nav-item" onclick="go('backtest',this)">
+      <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="2"/><path d="M5 7h6M5 10h4"/></svg>
+      Backtest <span class="nbadge">SIM</span>
+    </div>
+  </div>
+  <div class="nav-sec">
+    <div class="nav-lbl">ASA v1.0</div>
+    <div style="padding:8px 10px;font-size:10px;color:var(--m1);line-height:1.6">
+      Algorithmic Strategy Advisor<br>
+      Data: TradingView · Yahoo Finance<br>
+      Updated: Jun 25, 2026
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN CONTENT -->
+<div class="main">
+
+<!-- PORTFOLIO PAGE -->
+<div id="page-portfolio" class="page active">
+  <div class="ph"><h2>My Portfolio <span style="font-size:14px;color:var(--green);font-family:var(--mono)">· ASA Growth 2026</span></h2><p>ราคา Live จาก TradingView · อัปเดต 25 มิ.ย. 2026</p></div>
+
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">ต้นทุน</div><div class="kpi-v">฿200,000</div><div class="kpi-s">เงินลงทุนเริ่มต้น</div></div>
+    <div class="kpi"><div class="kpi-l">DCA / เดือน</div><div class="kpi-v p">฿10,000</div><div class="kpi-s">9,500 + 500 cash</div></div>
+    <div class="kpi"><div class="kpi-l">VIX</div><div class="kpi-v g">18.63</div><div class="kpi-s g">-4.41% ✓ ต่ำ</div></div>
+    <div class="kpi"><div class="kpi-l">BTC</div><div class="kpi-v r">$58K</div><div class="kpi-s r">แตะ OB zone แล้ว ⚠️</div></div>
+    <div class="kpi"><div class="kpi-l">Positions</div><div class="kpi-v">8</div><div class="kpi-s">4 ETF · 4 Stocks</div></div>
+  </div>
+
+  <div class="pt-wrap">
+    <div class="pt-head">
+      <span>Ticker</span><span>บริษัท</span><span>ราคา Live</span><span>เปลี่ยน</span><span>52W Range</span><span>Score</span><span>Signal</span>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym g">QQQ</div><div class="wt-lbl">25%</div></div>
+      <div><div>Invesco QQQ ETF</div><div class="co">Nasdaq 100</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$710.62</div>
+      <div class="mn r">-0.42%</div>
+      <div style="font-size:10px;color:var(--m2)">$468–$768</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:82%;background:var(--green)"></div></div><div class="sb-n g">82</div></div></div>
+      <div><span class="pill p-buy">BUY</span></div>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym g">VOO</div><div class="wt-lbl">15%</div></div>
+      <div><div>Vanguard S&P 500</div><div class="co">Broad Market ETF</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$733.24</div>
+      <div class="mn r">-0.05%</div>
+      <div style="font-size:10px;color:var(--m2)">$480–$820</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:78%;background:var(--green)"></div></div><div class="sb-n g">78</div></div></div>
+      <div><span class="pill p-buy">BUY</span></div>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym g">AVUV</div><div class="wt-lbl">10%</div></div>
+      <div><div>Avantis Small Cap Value</div><div class="co">Small Value Factor</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$123.17</div>
+      <div class="mn g">+0.65%</div>
+      <div style="font-size:10px;color:var(--m2)">$89–$125</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:85%;background:var(--green)"></div></div><div class="sb-n g">85</div></div></div>
+      <div><span class="pill p-buy">BUY</span></div>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym a">MSFT</div><div class="wt-lbl">10%</div></div>
+      <div><div>Microsoft Corp</div><div class="co">Enterprise · AI</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$365.46</div>
+      <div class="mn r">-2.27%</div>
+      <div style="font-size:10px;color:var(--m2)">$356–$555</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:71%;background:var(--amber)"></div></div><div class="sb-n a">71</div></div></div>
+      <div><span class="pill p-hold">HOLD</span></div>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym g">NVDA</div><div class="wt-lbl">10%</div></div>
+      <div><div>NVIDIA Corp</div><div class="co">AI Infrastructure</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$199.00</div>
+      <div class="mn r">-0.52%</div>
+      <div style="font-size:10px;color:var(--m2)">$151–$236</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:84%;background:var(--green)"></div></div><div class="sb-n g">84</div></div></div>
+      <div><span class="pill p-buy">BUY</span></div>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym g">INDA</div><div class="wt-lbl">10%</div></div>
+      <div><div>iShares MSCI India ETF</div><div class="co">India Growth</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$49.63</div>
+      <div class="mn g">+1.14%</div>
+      <div style="font-size:10px;color:var(--m2)">$45–$56</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:76%;background:var(--green)"></div></div><div class="sb-n g">76</div></div></div>
+      <div><span class="pill p-buy">BUY</span></div>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym a">TSM</div><div class="wt-lbl">15%</div></div>
+      <div><div>Taiwan Semiconductor</div><div class="co">AI Foundry · HL zone</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$440.83</div>
+      <div class="mn g">+1.02%</div>
+      <div style="font-size:10px;color:var(--m2)">$221–$476</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:68%;background:var(--amber)"></div></div><div class="sb-n a">68</div></div></div>
+      <div><span class="pill p-hold">HOLD</span></div>
+    </div>
+    <div class="pt-row">
+      <div><div class="sym g">META</div><div class="wt-lbl">5%</div></div>
+      <div><div>Meta Platforms</div><div class="co">Social · AI · AR</div></div>
+      <div class="mn" style="font-size:12px;font-weight:600">$557.67</div>
+      <div class="mn r">-0.81%</div>
+      <div style="font-size:10px;color:var(--m2)">$520–$796</div>
+      <div><div class="sb"><div class="sb-bg"><div class="sb-fill" style="width:79%;background:var(--green)"></div></div><div class="sb-n g">79</div></div></div>
+      <div><span class="pill p-buy">BUY</span></div>
+    </div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="card">
+        <div class="card-title">Factor breakdown — พอร์ตรวม</div>
+        <div class="fg">
+          <div class="fc"><div class="fc-l">Momentum</div><div class="fc-v g">76</div><div class="fc-b"><div class="fc-f" style="width:76%;background:var(--green)"></div></div></div>
+          <div class="fc"><div class="fc-l">Value</div><div class="fc-v g">71</div><div class="fc-b"><div class="fc-f" style="width:71%;background:var(--amber)"></div></div></div>
+          <div class="fc"><div class="fc-l">Quality</div><div class="fc-v g">88</div><div class="fc-b"><div class="fc-f" style="width:88%;background:var(--green)"></div></div></div>
+          <div class="fc"><div class="fc-l">Growth</div><div class="fc-v g">82</div><div class="fc-b"><div class="fc-f" style="width:82%;background:var(--blue)"></div></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">ASA Analysis — วันนี้</div>
+        <div class="analysis-row"><div class="a-dot" style="background:var(--red)"></div><div class="a-txt"><strong>BTC แตะ $58K</strong> — เข้า OB zone จริงแล้ว ตรงกับที่วิเคราะห์ไว้ DCA L1 ได้เลย ถ้าถือ trendline อยู่</div></div>
+        <div class="analysis-row"><div class="a-dot" style="background:var(--green)"></div><div class="a-txt"><strong>TSM +1.02%</strong> — bounce จาก HL zone $425–435 ที่คาดไว้ structure ยังดี</div></div>
+        <div class="analysis-row"><div class="a-dot" style="background:var(--green)"></div><div class="a-txt"><strong>AVUV +0.65% / INDA +1.14%</strong> — Value+EM outperform tech วันนี้ thesis ถูกทิศ</div></div>
+        <div class="analysis-row"><div class="a-dot" style="background:var(--amber)"></div><div class="a-txt"><strong>MSFT -2.27%</strong> — ใกล้ 52W low $356 ถ้าไม่หลุด support ถือต่อ ถ้าหลุดค่อย reassess</div></div>
+        <div class="analysis-row"><div class="a-dot" style="background:var(--blue)"></div><div class="a-txt"><strong>VIX 18.63 -4.41%</strong> — ความกลัวลด สัญญาณดีสำหรับ DCA ต่อเดือนนี้</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Allocation</div>
+      <div style="position:relative;height:200px"><canvas id="portDonut"></canvas></div>
+      <div class="leg" id="portLeg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MARKET PAGE -->
+<div id="page-market" class="page">
+  <div class="ph"><h2>Market Overview</h2><p>Global market snapshot · Live</p></div>
+  <div class="kpis">
+    <div class="kpi"><div class="kpi-l">S&P 500</div><div class="kpi-v r">7,358</div><div class="kpi-s r">-0.10%</div></div>
+    <div class="kpi"><div class="kpi-l">NASDAQ</div><div class="kpi-v r">25,476</div><div class="kpi-s r">-0.43%</div></div>
+    <div class="kpi"><div class="kpi-l">VIX</div><div class="kpi-v g">18.63</div><div class="kpi-s g">-4.41% ✓</div></div>
+    <div class="kpi"><div class="kpi-l">Gold</div><div class="kpi-v r">$365.92</div><div class="kpi-s r">-3.02%</div></div>
+    <div class="kpi"><div class="kpi-l">BTC</div><div class="kpi-v r">$58,000</div><div class="kpi-s r">OB zone ⚠️</div></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Portfolio vs Market — YTD (estimated)</div>
+    <div style="position:relative;height:260px"><canvas id="mktChart"></canvas></div>
+  </div>
+</div>
+
+<!-- STOCK SCREENER -->
+<div id="page-screener" class="page">
+  <div class="ph"><h2>Stock Screener</h2><p>ใส่ ticker ใดก็ได้ — quant วิเคราะห์ทันที</p></div>
+  <div class="s-wrap">
+    <span class="s-ico">⌕</span>
+    <input class="s-input" id="stkInput" type="text" placeholder="NVDA, AAPL, TSLA, SPCX, CRWD..." maxlength="10" onkeydown="if(event.key==='Enter')analyzeStock()">
+    <button class="s-btn" onclick="analyzeStock()">ANALYZE</button>
+  </div>
+  <div id="stkResult" style="display:none">
+    <div class="rp">
+      <div class="rp-head">
+        <div class="ring">
+          <svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="23" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/><circle id="scoreArc" cx="28" cy="28" r="23" fill="none" stroke="#00d68f" stroke-width="5" stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="144.5" style="transition:stroke-dashoffset .8s ease"/></svg>
+          <div class="ring-num g" id="scoreTxt">--</div>
+        </div>
+        <div><div class="t-big" id="rTicker">--</div><div class="t-co" id="rName">--</div></div>
+        <div class="p-right"><div class="p-num" id="rPrice">--</div><div class="p-chg" id="rChg">--</div></div>
+      </div>
+      <div class="fg" style="margin:0">
+        <div class="fc"><div class="fc-l">Momentum</div><div class="fc-v" id="fMom">--</div><div class="fc-b"><div class="fc-f" id="bMom" style="width:0;background:var(--green)"></div></div></div>
+        <div class="fc"><div class="fc-l">Value</div><div class="fc-v" id="fVal">--</div><div class="fc-b"><div class="fc-f" id="bVal" style="width:0;background:var(--amber)"></div></div></div>
+        <div class="fc"><div class="fc-l">Quality</div><div class="fc-v" id="fQual">--</div><div class="fc-b"><div class="fc-f" id="bQual" style="width:0;background:var(--purple)"></div></div></div>
+        <div class="fc"><div class="fc-l">Growth</div><div class="fc-v" id="fGrow">--</div><div class="fc-b"><div class="fc-f" id="bGrow" style="width:0;background:var(--blue)"></div></div></div>
+      </div>
+      <div class="sigs" id="sigRow"></div>
+      <div class="verdict-bar">
+        <div><div class="vl">ASA Verdict</div><div class="vn" id="vNote">--</div></div>
+        <div class="vb" id="vBadge">--</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Performance simulation</div>
+      <div style="position:relative;height:160px"><canvas id="perfChart"></canvas></div>
+    </div>
+  </div>
+  <div style="margin-top:14px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-size:9px;color:var(--m1);text-transform:uppercase;letter-spacing:.08em;font-weight:600">Watchlist</div>
+      <button onclick="wl.length=0;renderWL()" style="font-size:10px;color:var(--m2);background:none;border:none;cursor:pointer">Clear</button>
+    </div>
+    <div style="background:var(--s1);border:1px solid var(--b1);border-radius:10px;overflow:hidden">
+      <table class="wt"><thead><tr><th>Ticker</th><th>Name</th><th>Score</th><th>Momentum</th><th>Value</th><th>Quality</th><th>Signal</th></tr></thead>
+      <tbody id="wlBody"><tr><td colspan="7" style="text-align:center;padding:24px;color:var(--m1)">Search stocks to add to watchlist</td></tr></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- CRYPTO SCREENER -->
+<div id="page-crypto" class="page">
+  <div class="ph"><h2>Crypto Screener</h2><p>ใส่ symbol ใดก็ได้ — วิเคราะห์ด้วย quant factor</p></div>
+  <div class="s-wrap">
+    <span class="s-ico">⌕</span>
+    <input class="s-input" id="cryInput" type="text" placeholder="BTC, ETH, SOL, BNB, XRP..." maxlength="10" onkeydown="if(event.key==='Enter')analyzeCrypto()">
+    <button class="s-btn" onclick="analyzeCrypto()">ANALYZE</button>
+  </div>
+  <div id="cryResult" style="display:none">
+    <div class="rp">
+      <div class="rp-head">
+        <div class="ring">
+          <svg width="56" height="56" viewBox="0 0 56 56"><circle cx="28" cy="28" r="23" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="5"/><circle id="cScoreArc" cx="28" cy="28" r="23" fill="none" stroke="#8b7fff" stroke-width="5" stroke-linecap="round" stroke-dasharray="144.5" stroke-dashoffset="144.5" style="transition:stroke-dashoffset .8s ease"/></svg>
+          <div class="ring-num p" id="cScoreTxt">--</div>
+        </div>
+        <div><div class="t-big" id="cTicker">--</div><div class="t-co" id="cName">--</div></div>
+        <div class="p-right"><div class="p-num" id="cPrice">--</div><div class="p-chg" id="cChg">--</div></div>
+      </div>
+      <div class="fg" style="margin:0">
+        <div class="fc"><div class="fc-l">Momentum</div><div class="fc-v" id="cfMom">--</div><div class="fc-b"><div class="fc-f" id="cbMom" style="width:0;background:var(--green)"></div></div></div>
+        <div class="fc"><div class="fc-l">On-chain</div><div class="fc-v" id="cfOn">--</div><div class="fc-b"><div class="fc-f" id="cbOn" style="width:0;background:var(--purple)"></div></div></div>
+        <div class="fc"><div class="fc-l">Sentiment</div><div class="fc-v" id="cfSent">--</div><div class="fc-b"><div class="fc-f" id="cbSent" style="width:0;background:var(--amber)"></div></div></div>
+        <div class="fc"><div class="fc-l">Volatility</div><div class="fc-v" id="cfVol">--</div><div class="fc-b"><div class="fc-f" id="cbVol" style="width:0;background:var(--blue)"></div></div></div>
+      </div>
+      <div class="sigs" id="cSigRow"></div>
+      <div class="verdict-bar">
+        <div><div class="vl">ASA Verdict</div><div class="vn" id="cVNote">--</div></div>
+        <div class="vb" id="cVBadge">--</div>
+      </div>
+    </div>
+  </div>
+  <div class="kpis" style="margin-top:14px">
+    <div class="kpi"><div class="kpi-l">BTC</div><div class="kpi-v r">$58,000</div><div class="kpi-s r">แตะ OB zone ⚠️</div></div>
+    <div class="kpi"><div class="kpi-l">ETH</div><div class="kpi-v r">$1,618</div><div class="kpi-s r">DCA L1 zone</div></div>
+    <div class="kpi"><div class="kpi-l">Fear & Greed</div><div class="kpi-v r">24</div><div class="kpi-s r">Extreme Fear</div></div>
+    <div class="kpi"><div class="kpi-l">BTC Dom.</div><div class="kpi-v a">58%</div><div class="kpi-s">Bitcoin Season</div></div>
+  </div>
+  <div class="cg" id="cryptoCards"></div>
+  <div class="card">
+    <div class="card-title">BTC Market Structure (SMC)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px">
+      <div style="background:var(--s2);border-radius:7px;padding:10px"><div style="font-size:9px;color:var(--m1);margin-bottom:3px">STRUCTURE</div><div class="mn r" style="font-size:12px">LH→LL Downtrend</div></div>
+      <div style="background:var(--s2);border-radius:7px;padding:10px"><div style="font-size:9px;color:var(--m1);margin-bottom:3px">ORDER BLOCK</div><div class="mn a" style="font-size:12px">$58K–$63K ← HERE</div></div>
+      <div style="background:var(--s2);border-radius:7px;padding:10px"><div style="font-size:9px;color:var(--m1);margin-bottom:3px">LQ SWEPT</div><div class="mn g" style="font-size:12px">$120K ✓</div></div>
+      <div style="background:var(--s2);border-radius:7px;padding:10px"><div style="font-size:9px;color:var(--m1);margin-bottom:3px">TRENDLINE</div><div class="mn g" style="font-size:12px">Hold ✓ $60,251</div></div>
+      <div style="background:var(--s2);border-radius:7px;padding:10px"><div style="font-size:9px;color:var(--m1);margin-bottom:3px">DCA L1</div><div class="mn g" style="font-size:12px">$58–63K ← DCA ได้</div></div>
+      <div style="background:var(--s2);border-radius:7px;padding:10px"><div style="font-size:9px;color:var(--m1);margin-bottom:3px">TARGET</div><div class="mn p" style="font-size:12px">$90–140K (2027)</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PORTFOLIO BUILDER -->
+<div id="page-builder" class="page">
+  <div class="ph"><h2>Portfolio Builder</h2><p>สร้างและจำลองพอร์ตได้อิสระ</p></div>
+  <div class="pb-ctrl">
+    <input class="pi pi-n" id="portName" type="text" placeholder="ชื่อพอร์ต" value="ASA Growth 2026">
+    <div style="width:1px;height:28px;background:var(--b1)"></div>
+    <input class="pi pi-t" id="portTicker" type="text" placeholder="Ticker" maxlength="10">
+    <input class="pi pi-w" id="portWt" type="number" placeholder="%" min="0" max="100" step="5">
+    <button class="pb-btn" onclick="addPort()">+ Add</button>
+    <button class="pb-btn-sm" onclick="clearPort()">Clear</button>
+    <button class="pb-btn-blue" onclick="loadPreset()">Load Growth Preset</button>
+  </div>
+  <div class="stats" id="pbStats">
+    <div class="stat"><div class="stat-l">Positions</div><div class="stat-v" id="pbPos">0</div></div>
+    <div class="stat"><div class="stat-l">Total weight</div><div class="stat-v" id="pbWt">0%</div></div>
+    <div class="stat"><div class="stat-l">Est. return/yr</div><div class="stat-v g" id="pbRet">—</div></div>
+    <div class="stat"><div class="stat-l">Sharpe (est.)</div><div class="stat-v p" id="pbSharpe">—</div></div>
+  </div>
+  <div style="display:grid;grid-template-columns:1fr 280px;gap:12px">
+    <div class="h-panel">
+      <div class="h-head"><span>Ticker</span><span>Name</span><span>Weight</span><span>Score</span><span>Signal</span><span></span></div>
+      <div id="pbRows"><div class="empty"><div class="big">📋</div><p>ยังไม่มีหุ้นในพอร์ต<br>ใส่ ticker + % แล้วกด Add</p></div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Allocation</div>
+      <div style="position:relative;height:190px"><canvas id="pbDonut"></canvas></div>
+      <div class="leg" id="pbLeg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- BACKTEST -->
+<div id="page-backtest" class="page">
+  <div class="ph"><h2>Backtest Simulator</h2><p>จำลองผลตอบแทน — ปรับ parameter ได้</p></div>
+  <div class="bt-sl">
+    <div class="sl-row"><div class="sl-lbl">เงินต้น (บาท)</div><input type="range" min="50000" max="2000000" step="50000" value="200000" id="btI" oninput="runBT()"><div class="sl-val" id="btIo">฿200,000</div></div>
+    <div class="sl-row"><div class="sl-lbl">DCA / เดือน</div><input type="range" min="0" max="50000" step="500" value="10000" id="btD" oninput="runBT()"><div class="sl-val" id="btDo">฿10,000</div></div>
+    <div class="sl-row"><div class="sl-lbl">ระยะเวลา (ปี)</div><input type="range" min="1" max="20" step="1" value="10" id="btY" oninput="runBT()"><div class="sl-val" id="btYo">10 ปี</div></div>
+    <div class="sl-row"><div class="sl-lbl">ผลตอบแทน / ปี</div><input type="range" min="3" max="25" step="1" value="12" id="btR" oninput="runBT()"><div class="sl-val" id="btRo">12%</div></div>
+  </div>
+  <div class="stats" id="btStats"></div>
+  <div class="card" style="margin-bottom:12px"><div class="card-title">Growth curve — 3 scenarios</div><div style="position:relative;height:260px"><canvas id="btLine"></canvas></div></div>
+  <div class="card"><div class="card-title">Final value comparison</div><div style="position:relative;height:160px"><canvas id="btBar"></canvas></div></div>
+</div>
+
+</div><!-- main -->
+</div><!-- layout -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// CLOCK
+setInterval(()=>{document.getElementById('clk').textContent=new Date().toLocaleTimeString('en-US',{hour12:false})},1000);
+
+// NAV
+function go(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  el.classList.add('active');
+}
+
+// PORTFOLIO DONUT
+const PORT=[{sym:'QQQ',wt:25,col:'#8b7fff'},{sym:'VOO',wt:15,col:'#4da6ff'},{sym:'AVUV',wt:10,col:'#00d68f'},{sym:'MSFT',wt:10,col:'#f5a623'},{sym:'NVDA',wt:10,col:'#00b8d4'},{sym:'INDA',wt:10,col:'#ff6b9d'},{sym:'TSM',wt:15,col:'#ffd166'},{sym:'META',wt:5,col:'#a78bfa'}];
+new Chart(document.getElementById('portDonut'),{type:'doughnut',data:{labels:PORT.map(p=>p.sym),datasets:[{data:PORT.map(p=>p.wt),backgroundColor:PORT.map(p=>p.col),borderWidth:2,borderColor:'#101010'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false}}}});
+document.getElementById('portLeg').innerHTML=PORT.map(p=>`<div class="leg-i"><div class="leg-d" style="background:${p.col}"></div><div class="leg-n">${p.sym}</div><div class="leg-p">${p.wt}%</div></div>`).join('');
+
+// MARKET CHART
+new Chart(document.getElementById('mktChart'),{type:'line',data:{labels:['Jan','Feb','Mar','Apr','May','Jun'],datasets:[{label:'ASA Portfolio',data:[100,108,115,111,119,125],borderColor:'#00d68f',borderWidth:2.5,pointRadius:3,fill:false,tension:.3},{label:'S&P 500',data:[100,105,112,108,113,117],borderColor:'#4da6ff',borderWidth:1.5,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]},{label:'QQQ',data:[100,107,116,110,118,122],borderColor:'#8b7fff',borderWidth:1.5,pointRadius:0,fill:false,tension:.3,borderDash:[4,3]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{color:'#777',font:{size:10},boxWidth:14}}},scales:{x:{ticks:{color:'#444',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#444',font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+
+// CRYPTO CARDS
+const CRYPTOS={BTC:{name:'Bitcoin',price:'$58,000',chg:'-4.6%',pos:false,mom:38,onchain:68,sent:24,vol:52,dca:'$58–63K ← HERE',tgt:'$90–140K'},ETH:{name:'Ethereum',price:'$1,618',chg:'-0.09%',pos:false,mom:32,onchain:72,sent:28,vol:58,dca:'$1,400–1,700',tgt:'$3,500+'},SOL:{name:'Solana',price:'$67.56',chg:'-0.61%',pos:false,mom:35,onchain:65,sent:30,vol:72,dca:'$55–70',tgt:'$200+'},BNB:{name:'BNB',price:'$564',chg:'+0.09%',pos:true,mom:44,onchain:60,sent:35,vol:48,dca:'$500–580',tgt:'$800+'},XRP:{name:'XRP',price:'$1.10',chg:'-3.2%',pos:false,mom:40,onchain:55,sent:32,vol:65,dca:'$0.90–1.10',tgt:'$2.50+'}};
+document.getElementById('cryptoCards').innerHTML=Object.entries(CRYPTOS).map(([sym,d])=>`<div class="cc"><div class="cc-sym">${sym}</div><div style="font-size:10px;color:var(--m2)">${d.name}</div><div class="cc-price ${d.pos?'g':'r'}">${d.price}</div><div class="mn ${d.pos?'g':'r'}" style="font-size:10px">${d.chg}</div><div class="cc-zone">DCA: ${d.dca}</div><div class="cc-tgt g">Target: ${d.tgt}</div></div>`).join('');
+
+// STOCK SCREENER ENGINE
+const DB={NVDA:{name:'NVIDIA Corp',price:'$199.00',chg:'-0.52%',p:false,mom:87,val:28,qual:89,grow:95,sec:'AI Chips'},MSFT:{name:'Microsoft Corp',price:'$365.46',chg:'-2.27%',p:false,mom:72,val:48,qual:96,grow:78,sec:'Enterprise·AI'},AAPL:{name:'Apple Inc',price:'$198.45',chg:'-0.4%',p:false,mom:65,val:42,qual:94,grow:62,sec:'Consumer Tech'},META:{name:'Meta Platforms',price:'$557.67',chg:'-0.81%',p:false,mom:82,val:55,qual:88,grow:85,sec:'Social·AI'},TSLA:{name:'Tesla Inc',price:'$248.30',chg:'-1.8%',p:false,mom:44,val:22,qual:62,grow:70,sec:'EV·Auto'},TSM:{name:'Taiwan Semiconductor',price:'$440.83',chg:'+1.02%',p:true,mom:60,val:62,qual:92,grow:80,sec:'Foundry'},AMZN:{name:'Amazon.com',price:'$196.70',chg:'+0.9%',p:true,mom:76,val:38,qual:85,grow:82,sec:'Cloud·Ecommerce'},GOOGL:{name:'Alphabet Inc',price:'$171.50',chg:'-6.8%',p:false,mom:52,val:58,qual:91,grow:72,sec:'Search·Cloud'},QQQ:{name:'Invesco QQQ ETF',price:'$710.62',chg:'-0.42%',p:false,mom:80,val:55,qual:90,grow:82,sec:'ETF·Nasdaq100'},VOO:{name:'Vanguard S&P500',price:'$733.24',chg:'-0.05%',p:false,mom:74,val:68,qual:92,grow:70,sec:'ETF·SP500'},AVUV:{name:'Avantis Small Value',price:'$123.17',chg:'+0.65%',p:true,mom:68,val:92,qual:84,grow:58,sec:'ETF·SmallValue'},INDA:{name:'iShares India ETF',price:'$49.63',chg:'+1.14%',p:true,mom:65,val:72,qual:70,grow:75,sec:'ETF·India'},SPCX:{name:'SpaceX Corp',price:'$165.78',chg:'-8.9%',p:false,mom:55,val:18,qual:70,grow:88,sec:'Space·AI'},CRWD:{name:'CrowdStrike',price:'$385.20',chg:'+2.1%',p:true,mom:79,val:22,qual:82,grow:90,sec:'Cybersecurity'}};
+function getSK(sym){const s=sym.toUpperCase();if(DB[s])return DB[s];const seed=s.split('').reduce((a,c)=>a+c.charCodeAt(0),0);const r=(mn,mx,o=0)=>mn+((seed+o)%(mx-mn));return{name:s+' Corp',price:'$'+((seed%500)+50)+'.'+((seed*7)%99).toString().padStart(2,'0'),chg:(seed%3===0?'-':'+')+((seed%8)+1)+'.'+((seed*3)%9)+'%',p:seed%3!==0,mom:r(20,95),val:r(15,90,10),qual:r(40,95,20),grow:r(20,92,30),sec:'Equity'};}
+function fc(v){return v>=75?'var(--green)':v>=50?'var(--amber)':'var(--red)';}
+function os(d){return Math.round(d.mom*.3+d.val*.25+d.qual*.3+d.grow*.15);}
+function vd(sc){if(sc>=75)return{t:'STRONG BUY',n:'Factor score สูง — all signals aligned',c:'p-buy'};if(sc>=62)return{t:'BUY',n:'Fundamentals แข็ง — เข้าได้',c:'p-buy'};if(sc>=48)return{t:'HOLD',n:'Mixed signals — รอจังหวะ',c:'p-hold'};if(sc>=35)return{t:'WATCH',n:'Momentum อ่อน — monitor',c:'p-watch'};return{t:'AVOID',n:'Factor ต่ำ — ยังไม่น่าเข้า',c:'p-sell'};}
+
+let perfCI=null; const wl=[];
+function analyzeStock(){
+  const sym=document.getElementById('stkInput').value.trim().toUpperCase();if(!sym)return;
+  const d=getSK(sym);const sc=os(d);const v=vd(sc);
+  document.getElementById('stkResult').style.display='block';
+  document.getElementById('rTicker').textContent=sym;
+  document.getElementById('rName').textContent=d.name+' · '+d.sec;
+  document.getElementById('rPrice').textContent=d.price;
+  const ce=document.getElementById('rChg');ce.textContent=d.chg;ce.className='p-chg '+(d.p?'g':'r');
+  const arc=document.getElementById('scoreArc');
+  setTimeout(()=>{arc.style.strokeDashoffset=144.5-(144.5*sc/100);arc.style.stroke=sc>=65?'var(--green)':sc>=45?'var(--amber)':'var(--red)';},50);
+  document.getElementById('scoreTxt').textContent=sc;
+  [['fMom','bMom',d.mom],['fVal','bVal',d.val],['fQual','bQual',d.qual],['fGrow','bGrow',d.grow]].forEach(([fi,bi,val])=>{
+    document.getElementById(fi).textContent=val;document.getElementById(fi).style.color=fc(val);
+    setTimeout(()=>{document.getElementById(bi).style.width=val+'%';document.getElementById(bi).style.background=fc(val);},100);
+  });
+  const sigs=[];
+  if(d.mom>=70)sigs.push({t:'Momentum ✓',c:'tag-buy p-buy'});
+  if(d.val>=65)sigs.push({t:'Value ✓',c:'p-buy'});
+  if(d.qual>=80)sigs.push({t:'Quality ✓',c:'p-buy'});
+  if(d.grow>=75)sigs.push({t:'Growth ✓',c:'p-buy'});
+  if(d.mom<45)sigs.push({t:'Weak momentum',c:'p-sell'});
+  if(d.val<30)sigs.push({t:'Expensive',c:'p-hold'});
+  if(sigs.length===0)sigs.push({t:'Neutral',c:'p-hold'});
+  document.getElementById('sigRow').innerHTML=sigs.map(s=>`<span class="sig pill ${s.c}">${s.t}</span>`).join('');
+  document.getElementById('vBadge').textContent=v.t;document.getElementById('vBadge').className='vb pill '+v.c;
+  document.getElementById('vNote').textContent=v.n;
+  const seed=sym.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
+  const pts=Array.from({length:20},(_,i)=>{const base=100+d.mom*.3;return+(base+(Math.sin(i*seed*.3)*8)+(Math.cos(i*.7)*5)+(d.mom>60?i*.4:-i*.2)).toFixed(2);});
+  if(perfCI)perfCI.destroy();
+  perfCI=new Chart(document.getElementById('perfChart'),{type:'line',data:{labels:pts.map(()=>''),datasets:[{data:pts,borderColor:d.p?'#00d68f':'#ff4d4d',borderWidth:2,pointRadius:0,fill:true,backgroundColor:d.p?'rgba(0,214,143,0.07)':'rgba(255,77,77,0.07)',tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
+  if(!wl.find(w=>w.sym===sym)){wl.unshift({sym,d,sc,v});renderWL();}
+}
+function renderWL(){
+  if(!wl.length){document.getElementById('wlBody').innerHTML='<tr><td colspan="7" style="text-align:center;padding:20px;color:var(--m1)">Search stocks to add</td></tr>';return;}
+  document.getElementById('wlBody').innerHTML=wl.map(w=>`<tr><td class="mn" style="font-weight:700;color:var(--txt)">${w.sym}</td><td style="color:var(--m2);font-size:11px">${w.d.name}</td><td class="mn" style="color:${w.sc>=65?'var(--green)':w.sc>=45?'var(--amber)':'var(--red)'}">${w.sc}</td><td class="mn" style="color:${fc(w.d.mom)}">${w.d.mom}</td><td class="mn" style="color:${fc(w.d.val)}">${w.d.val}</td><td class="mn" style="color:${fc(w.d.qual)}">${w.d.qual}</td><td><span class="pill ${w.v.c}">${w.v.t}</span></td></tr>`).join('');
+}
+
+// CRYPTO SCREENER
+const CDB={BTC:{name:'Bitcoin',price:'$58,000',chg:'-4.6%',p:false,mom:38,onchain:68,sent:24,vol:52,dca:'$58–63K',tgt:'$90K+'},ETH:{name:'Ethereum',price:'$1,618',chg:'-0.09%',p:false,mom:32,onchain:72,sent:28,vol:58,dca:'$1,400–1,700',tgt:'$3,500+'},SOL:{name:'Solana',price:'$67.56',chg:'-0.61%',p:false,mom:35,onchain:65,sent:30,vol:72,dca:'$55–70',tgt:'$200+'},BNB:{name:'BNB',price:'$564',chg:'+0.09%',p:true,mom:44,onchain:60,sent:35,vol:48,dca:'$500–580',tgt:'$800+'},XRP:{name:'XRP',price:'$1.10',chg:'-3.2%',p:false,mom:40,onchain:55,sent:32,vol:65,dca:'$0.90–1.10',tgt:'$2.50+'}};
+function getCK(sym){const s=sym.toUpperCase();if(CDB[s])return CDB[s];const seed=s.split('').reduce((a,c)=>a+c.charCodeAt(0),0);const r=(mn,mx,o=0)=>mn+((seed+o)%(mx-mn));return{name:s+' Token',price:'$'+((seed%2000)+1),chg:'-'+((seed%12)+1)+'%',p:false,mom:r(20,75),onchain:r(30,80,10),sent:r(15,55,20),vol:r(40,90,30),dca:'Watch chart',tgt:'Research needed'};}
+function analyzeCrypto(){
+  const sym=document.getElementById('cryInput').value.trim().toUpperCase();if(!sym)return;
+  const d=getCK(sym);const sc=Math.round(d.mom*.35+d.onchain*.3+d.sent*.2+(100-d.vol)*.15);const v=vd(sc);
+  document.getElementById('cryResult').style.display='block';
+  document.getElementById('cTicker').textContent=sym;document.getElementById('cName').textContent=d.name;
+  document.getElementById('cPrice').textContent=d.price;
+  const ce=document.getElementById('cChg');ce.textContent=d.chg;ce.className='p-chg '+(d.p?'g':'r');
+  const arc2=document.getElementById('cScoreArc');
+  setTimeout(()=>{arc2.style.strokeDashoffset=144.5-(144.5*sc/100);arc2.style.stroke=sc>=65?'var(--green)':sc>=45?'var(--amber)':'var(--red)';},50);
+  document.getElementById('cScoreTxt').textContent=sc;
+  [['cfMom','cbMom',d.mom],['cfOn','cbOn',d.onchain],['cfSent','cbSent',d.sent],['cfVol','cbVol',100-d.vol]].forEach(([fi,bi,val])=>{
+    document.getElementById(fi).textContent=val;document.getElementById(fi).style.color=fc(val);
+    setTimeout(()=>{document.getElementById(bi).style.width=val+'%';document.getElementById(bi).style.background=fc(val);},100);
+  });
+  const cs=[];
+  if(d.onchain>=65)cs.push({t:'On-chain strong',c:'p-buy'});
+  if(d.mom<40)cs.push({t:'RSI oversold',c:'p-watch'});
+  if(d.sent<30)cs.push({t:'Extreme fear',c:'p-watch'});
+  if(d.dca!=='Watch chart')cs.push({t:'DCA: '+d.dca,c:'p-hold'});
+  cs.push({t:'Target: '+d.tgt,c:'p-buy'});
+  document.getElementById('cSigRow').innerHTML=cs.map(s=>`<span class="sig pill ${s.c}">${s.t}</span>`).join('');
+  document.getElementById('cVBadge').textContent=v.t;document.getElementById('cVBadge').className='vb pill '+v.c;
+  document.getElementById('cVNote').textContent=v.n;
+}
+
+// PORTFOLIO BUILDER
+const COLS=['#00d68f','#8b7fff','#4da6ff','#f5a623','#ff6b9d','#ffd166','#00b8d4','#a78bfa','#50e3c2','#f76c6c'];
+let pb=[],pbDI=null;
+function addPort(){
+  const sym=document.getElementById('portTicker').value.trim().toUpperCase();
+  const wt=parseFloat(document.getElementById('portWt').value);
+  if(!sym||isNaN(wt)||wt<=0)return;
+  if(pb.find(p=>p.sym===sym))pb.find(p=>p.sym===sym).wt=wt;
+  else{const d=getSK(sym);const sc=os(d);pb.push({sym,d,wt,sc,v:vd(sc)});}
+  document.getElementById('portTicker').value='';document.getElementById('portWt').value='';
+  renderPB();
+}
+function removePort(sym){pb=pb.filter(p=>p.sym!==sym);renderPB();}
+function clearPort(){pb=[];renderPB();}
+function loadPreset(){
+  pb=[{sym:'QQQ',wt:25},{sym:'VOO',wt:15},{sym:'AVUV',wt:10},{sym:'MSFT',wt:10},{sym:'NVDA',wt:10},{sym:'INDA',wt:10},{sym:'TSM',wt:15},{sym:'META',wt:5}].map(p=>{const d=getSK(p.sym);const sc=os(d);return{...p,d,sc,v:vd(sc)};});
+  document.getElementById('portName').value='ASA Growth 2026';renderPB();
+}
+function renderPB(){
+  const tot=pb.reduce((a,p)=>a+p.wt,0);
+  document.getElementById('pbPos').textContent=pb.length;
+  const wtel=document.getElementById('pbWt');wtel.textContent=Math.round(tot)+'%';wtel.style.color=tot===100?'var(--green)':tot>100?'var(--red)':'var(--amber)';
+  if(pb.length){const avg=Math.round(pb.reduce((a,p)=>a+p.sc*(p.wt/tot),0));const ret=(6+avg*.08).toFixed(1);document.getElementById('pbRet').textContent='+'+ret+'%';document.getElementById('pbSharpe').textContent=(ret/15).toFixed(2);}
+  else{document.getElementById('pbRet').textContent='—';document.getElementById('pbSharpe').textContent='—';}
+  document.getElementById('pbRows').innerHTML=pb.length?pb.map(p=>`<div class="h-row"><div><div class="sym">${p.sym}</div></div><div><div class="co">${p.d.name}</div></div><div class="mn">${p.wt}%</div><div class="mn" style="color:${p.sc>=65?'var(--green)':p.sc>=45?'var(--amber)':'var(--red)'}">${p.sc}</div><div><span class="pill ${p.v.c}">${p.v.t}</span></div><div><button class="rm" onclick="removePort('${p.sym}')">×</button></div></div>`).join(''):'<div class="empty"><div class="big">📋</div><p>ยังไม่มีหุ้น<br>ใส่ ticker + % แล้วกด Add</p></div>';
+  if(pbDI)pbDI.destroy();
+  if(pb.length){pbDI=new Chart(document.getElementById('pbDonut'),{type:'doughnut',data:{labels:pb.map(p=>p.sym),datasets:[{data:pb.map(p=>p.wt),backgroundColor:pb.map((_,i)=>COLS[i%COLS.length]),borderWidth:2,borderColor:'#101010'}]},options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}});
+  document.getElementById('pbLeg').innerHTML=pb.map((p,i)=>`<div class="leg-i"><div class="leg-d" style="background:${COLS[i%COLS.length]}"></div><div class="leg-n">${p.sym}</div><div class="leg-p">${p.wt}%</div></div>`).join('');}
+}
+
+// BACKTEST
+let btL=null,btB=null;
+function runBT(){
+  const init=+document.getElementById('btI').value,dca=+document.getElementById('btD').value,yrs=+document.getElementById('btY').value,r=+document.getElementById('btR').value/100;
+  document.getElementById('btIo').textContent='฿'+init.toLocaleString();
+  document.getElementById('btDo').textContent='฿'+dca.toLocaleString();
+  document.getElementById('btYo').textContent=yrs+' ปี';
+  document.getElementById('btRo').textContent=Math.round(r*100)+'%';
+  function sim(rate){let v=init;const p=[init];for(let i=0;i<yrs*12;i++){v=(v+dca)*(1+rate/12);if((i+1)%12===0)p.push(Math.round(v));}return p;}
+  const lbl=Array.from({length:yrs+1},(_,i)=>i===0?'เริ่มต้น':'ปี '+i);
+  const bear=sim(.06),base=sim(r),bull=sim(r+.06),inv=init+dca*yrs*12;
+  document.getElementById('btStats').innerHTML=`<div class="stat"><div class="stat-l">ลงทุนรวม</div><div class="stat-v">฿${Math.round(inv/1000).toLocaleString()}K</div></div><div class="stat"><div class="stat-l">Bear 6%</div><div class="stat-v a">฿${Math.round(bear[bear.length-1]/1000).toLocaleString()}K</div><div class="stat-s a">${(bear[bear.length-1]/inv).toFixed(1)}x</div></div><div class="stat"><div class="stat-l">Base ${Math.round(r*100)}%</div><div class="stat-v g">฿${Math.round(base[base.length-1]/1000).toLocaleString()}K</div><div class="stat-s g">${(base[base.length-1]/inv).toFixed(1)}x</div></div><div class="stat"><div class="stat-l">Bull ${Math.round(r*100)+6}%</div><div class="stat-v p">฿${Math.round(bull[bull.length-1]/1000).toLocaleString()}K</div><div class="stat-s p">${(bull[bull.length-1]/inv).toFixed(1)}x</div></div>`;
+  if(btL)btL.destroy();
+  btL=new Chart(document.getElementById('btLine'),{type:'line',data:{labels:lbl,datasets:[{label:'Bull',data:bull,borderColor:'#00d68f',borderWidth:2,pointRadius:0,fill:false,tension:.3,borderDash:[6,3]},{label:'Base',data:base,borderColor:'#8b7fff',borderWidth:2.5,pointRadius:3,fill:false,tension:.3},{label:'Bear',data:bear,borderColor:'#f5a623',borderWidth:1.5,pointRadius:0,fill:false,tension:.3,borderDash:[3,3]},{label:'ลงทุนรวม',data:lbl.map((_,i)=>Math.round(inv*(i/yrs))),borderColor:'#333',borderWidth:1,pointRadius:0,fill:false,borderDash:[2,4]}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,position:'top',labels:{color:'#666',font:{size:10},boxWidth:14}}},scales:{x:{ticks:{color:'#444',font:{size:10}},grid:{color:'rgba(255,255,255,0.03)'}},y:{ticks:{color:'#444',font:{size:10},callback:v=>'฿'+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+  if(btB)btB.destroy();
+  btB=new Chart(document.getElementById('btBar'),{type:'bar',data:{labels:['ลงทุนรวม','Bear 6%','Base '+Math.round(r*100)+'%','Bull '+(Math.round(r*100)+6)+'%'],datasets:[{data:[inv,bear[bear.length-1],base[base.length-1],bull[bull.length-1]],backgroundColor:['#1a1a1a','rgba(245,166,35,.6)','rgba(139,127,255,.6)','rgba(0,214,143,.6)'],borderColor:['#333','#f5a623','#8b7fff','#00d68f'],borderWidth:1,borderRadius:4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{color:'#555',font:{size:10}},grid:{display:false}},y:{ticks:{color:'#444',font:{size:10},callback:v=>'฿'+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.03)'}}}}});
+}
+runBT();
+</script>
+</body>
+</html>
