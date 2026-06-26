@@ -421,6 +421,42 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14p
         <div><div class="vl">ASA Verdict</div><div class="vn" id="vNote">--</div></div>
         <div class="vb" id="vBadge">--</div>
       </div>
+      <!-- ASA FAIR VALUE COMPONENT -->
+    <div class="card" style="margin-top:12px; margin-bottom:12px;">
+      <div class="card-title" style="display:flex; justify-content:space-between;">
+        <span>ASA Fair Value & MoS</span>
+        <span id="fvBadge" class="pill" style="font-size:8px;">--</span>
+      </div>
+      
+      <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+        <div>
+          <div style="font-size:10px; color:var(--m2)">Current Price</div>
+          <div class="mn" id="fvCurrent" style="font-size:16px; font-weight:600">--</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px; color:var(--m2)">Fair Value</div>
+          <div class="mn p" id="fvTarget" style="font-size:16px; font-weight:600">--</div>
+        </div>
+      </div>
+      
+      <!-- Value Bar -->
+      <div style="position:relative; height:6px; background:var(--b1); border-radius:3px; margin:16px 0 8px;">
+        <!-- เส้นกึ่งกลาง (Fair Value = 50%) -->
+        <div style="position:absolute; left:50%; top:-4px; width:2px; height:14px; background:var(--purple); box-shadow:0 0 6px var(--purple);"></div>
+        <!-- จุดแสดงราคาปัจจุบัน -->
+        <div id="fvMarker" style="position:absolute; left:50%; top:-3px; width:12px; height:12px; border-radius:50%; background:var(--green); transform:translateX(-50%); transition:all 0.6s cubic-bezier(0.4, 0, 0.2, 1); box-shadow:0 0 4px #000;"></div>
+      </div>
+      
+      <div style="display:flex; justify-content:space-between; font-size:9px; color:var(--m1); text-transform:uppercase; font-weight:600;">
+        <span>Undervalued</span>
+        <span>Fair</span>
+        <span>Overvalued</span>
+      </div>
+      
+      <div id="fvMoSText" style="margin-top:12px; font-size:11px; text-align:center; padding:8px; background:var(--s2); border-radius:6px; color:var(--txt); line-height:1.5;">
+        --
+      </div>
+    </div>
     </div>
     <div class="card">
       <div class="card-title">Performance simulation</div>
