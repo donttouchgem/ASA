@@ -526,33 +526,33 @@ body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:14p
   </div>
 </div>
 
-<!-- PORTFOLIO BUILDER -->
+<!-- PORTFOLIO PAGE -->
 <div id="page-builder" class="page">
-  <div class="ph"><h2>Portfolio Builder</h2><p>สร้างและจำลองพอร์ตได้อิสระ</p></div>
+  <div class="ph"><h2>Portfolio</h2><p>จัดการพอร์ตการลงทุนของคุณ</p></div>
+  
+  <div class="pb-ctrl" style="margin-bottom: 20px; background:var(--s1); padding:10px; border-radius:10px;">
+    <select id="portSelector" class="pi" onchange="switchPortfolio()" style="width:160px;"></select>
+    <input class="pi" id="newPortName" type="text" placeholder="ชื่อพอร์ตใหม่" style="width:120px;">
+    <button class="pb-btn-blue" onclick="createPortfolio()">+ สร้าง</button>
+  </div>
+
   <div class="pb-ctrl">
-    <input class="pi pi-n" id="portName" type="text" placeholder="ชื่อพอร์ต" value="ASA Growth 2026">
     <input class="pi pi-t" id="portTicker" type="text" placeholder="Ticker" maxlength="10">
-    <input class="pi pi-w" id="portWt" type="number" placeholder="%" min="0" max="100" step="5">
-    <button class="pb-btn" onclick="addPort()">+ Add</button>
-    <button class="pb-btn-sm" onclick="clearPort()">Clear</button>
-    <button class="pb-btn-blue" onclick="loadPreset()">Preset</button>
+    <input class="pi pi-w" id="portAmount" type="number" placeholder="จำนวนเงิน" style="width:100px;">
+    <select id="portCurrency" class="pi"><option value="USD">USD</option><option value="THB">THB</option></select>
+    <button class="pb-btn" onclick="addAsset()">+ เพิ่มสินทรัพย์</button>
   </div>
+
   <div class="stats" id="pbStats">
+    <div class="stat"><div class="stat-l">Total Value</div><div class="stat-v" id="pbTotalVal">฿0</div></div>
     <div class="stat"><div class="stat-l">Positions</div><div class="stat-v" id="pbPos">0</div></div>
-    <div class="stat"><div class="stat-l">Total weight</div><div class="stat-v" id="pbWt">0%</div></div>
-    <div class="stat"><div class="stat-l">Est. return/yr</div><div class="stat-v g" id="pbRet">—</div></div>
-    <div class="stat"><div class="stat-l">Sharpe (est.)</div><div class="stat-v p" id="pbSharpe">—</div></div>
   </div>
-  <div style="display:grid;grid-template-columns:1fr;gap:12px" id="pbLayout">
-    <div class="h-panel">
-      <div class="h-head"><span>Ticker</span><span>Name</span><span>Weight</span><span>Score</span><span>Signal</span><span></span></div>
-      <div id="pbRows"><div class="empty"><div class="big">📋</div><p>ยังไม่มีหุ้น<br>ใส่ ticker + % แล้วกด Add</p></div></div>
+
+  <div class="h-panel">
+    <div class="h-head" style="grid-template-columns: 80px 1fr 100px 80px 40px;">
+      <span>Ticker</span><span>Name</span><span>Amount</span><span>Price</span><span></span>
     </div>
-    <div class="card">
-      <div class="card-title">Allocation</div>
-      <div style="position:relative;height:180px"><canvas id="pbDonut"></canvas></div>
-      <div class="leg" id="pbLeg"></div>
-    </div>
+    <div id="pbRows"><div class="empty">...</div></div>
   </div>
 </div>
 
@@ -848,103 +848,74 @@ function analyzeCrypto(){
   document.getElementById('cVNote').textContent=v.n;
 }
 
-// PORTFOLIO BUILDER
-const COLS=['#00d68f','#8b7fff','#4da6ff','#f5a623','#ff6b9d','#ffd166','#00b8d4','#a78bfa','#50e3c2','#f76c6c'];
-let pb=[],pbDI=null;
-function addPort(){
-  const sym=document.getElementById('portTicker').value.trim().toUpperCase();
-  const wt=parseFloat(document.getElementById('portWt').value);
-  if(!sym||isNaN(wt)||wt<=0)return;
-  if(pb.find(p=>p.sym===sym))pb.find(p=>p.sym===sym).wt=wt;
-  else{const d=getSK(sym);const sc=os(d);pb.push({sym,d,wt,sc,v:vd(sc)});}
-  document.getElementById('portTicker').value='';document.getElementById('portWt').value='';
-  renderPB();
-}
-function removePort(sym){pb=pb.filter(p=>p.sym!==sym);renderPB();}
-function clearPort(){pb=[];renderPB();}
-function loadPreset(){
-  pb=[{sym:'QQQ',wt:25},{sym:'VOO',wt:15},{sym:'AVUV',wt:10},{sym:'MSFT',wt:10},
-      {sym:'NVDA',wt:10},{sym:'INDA',wt:10},{sym:'TSM',wt:15},{sym:'META',wt:5}]
-    .map(p=>{const d=getSK(p.sym);const sc=os(d);return{...p,d,sc,v:vd(sc)};});
-  document.getElementById('portName').value='ASA Growth 2026';renderPB();
-}
-function renderPB(){
-  const tot=pb.reduce((a,p)=>a+p.wt,0);
-  document.getElementById('pbPos').textContent=pb.length;
-  const wtel=document.getElementById('pbWt');
-  wtel.textContent=Math.round(tot)+'%';
-  wtel.style.color=tot===100?'var(--green)':tot>100?'var(--red)':'var(--amber)';
-  if(pb.length){
-    const avg=Math.round(pb.reduce((a,p)=>a+p.sc*(p.wt/tot),0));
-    const ret=(6+avg*.08).toFixed(1);
-    document.getElementById('pbRet').textContent='+'+ret+'%';
-    document.getElementById('pbSharpe').textContent=(ret/15).toFixed(2);
-  }else{document.getElementById('pbRet').textContent='—';document.getElementById('pbSharpe').textContent='—';}
-  document.getElementById('pbRows').innerHTML=pb.length?pb.map(p=>`
-    <div class="h-row">
-      <div><div class="sym">${p.sym}</div></div>
-      <div><div class="co">${p.d.name}</div></div>
-      <div class="mn">${p.wt}%</div>
-      <div class="mn" style="color:${p.sc>=65?'var(--green)':p.sc>=45?'var(--amber)':'var(--red)'}">${p.sc}</div>
-      <div><span class="pill ${p.v.c}">${p.v.t}</span></div>
-      <div><button class="rm" onclick="removePort('${p.sym}')">×</button></div>
-    </div>`).join('')
-    :'<div class="empty"><div class="big">📋</div><p>ยังไม่มีหุ้น<br>ใส่ ticker + % แล้วกด Add</p></div>';
-  if(pbDI)pbDI.destroy();
-  if(pb.length){
-    pbDI=new Chart(document.getElementById('pbDonut'),{
-      type:'doughnut',
-      data:{labels:pb.map(p=>p.sym),datasets:[{data:pb.map(p=>p.wt),backgroundColor:pb.map((_,i)=>COLS[i%COLS.length]),borderWidth:2,borderColor:'#101010'}]},
-      options:{responsive:true,maintainAspectRatio:false,cutout:'60%',plugins:{legend:{display:false}}}
-    });
-    document.getElementById('pbLeg').innerHTML=pb.map((p,i)=>`
-      <div class="leg-i"><div class="leg-d" style="background:${COLS[i%COLS.length]}"></div><div class="leg-n">${p.sym}</div><div class="leg-p">${p.wt}%</div></div>`).join('');
-  }
+// ── PORTFOLIO MANAGER ──
+let portfolios = JSON.parse(localStorage.getItem('asa_portfolios')) || [{name: 'Main Portfolio', currency: 'USD', assets: []}];
+let activeIdx = 0;
+
+function savePortfolios() { localStorage.setItem('asa_portfolios', JSON.stringify(portfolios)); }
+
+function switchPortfolio() { activeIdx = document.getElementById('portSelector').selectedIndex; renderPortfolio(); }
+
+function createPortfolio() {
+  const name = document.getElementById('newPortName').value;
+  if(!name) return;
+  portfolios.push({name, currency: 'USD', assets: []});
+  document.getElementById('newPortName').value = '';
+  activeIdx = portfolios.length - 1;
+  renderPortfolioSelector();
+  renderPortfolio();
+  savePortfolios();
 }
 
-// BACKTEST
-let btL=null,btB=null;
-function runBT(){
-  const init=+document.getElementById('btI').value,
-        dca=+document.getElementById('btD').value,
-        yrs=+document.getElementById('btY').value,
-        r=+document.getElementById('btR').value/100;
-  document.getElementById('btIo').textContent='฿'+init.toLocaleString();
-  document.getElementById('btDo').textContent='฿'+dca.toLocaleString();
-  document.getElementById('btYo').textContent=yrs+' ปี';
-  document.getElementById('btRo').textContent=Math.round(r*100)+'%';
-  function sim(rate){let v=init;const p=[init];for(let i=0;i<yrs*12;i++){v=(v+dca)*(1+rate/12);if((i+1)%12===0)p.push(Math.round(v));}return p;}
-  const lbl=Array.from({length:yrs+1},(_,i)=>i===0?'Start':'Y'+i);
-  const bear=sim(.06),base=sim(r),bull=sim(r+.06),inv=init+dca*yrs*12;
-  document.getElementById('btStats').innerHTML=`
-    <div class="stat"><div class="stat-l">ลงทุนรวม</div><div class="stat-v">฿${Math.round(inv/1000).toLocaleString()}K</div></div>
-    <div class="stat"><div class="stat-l">Bear 6%</div><div class="stat-v a">฿${Math.round(bear[bear.length-1]/1000).toLocaleString()}K</div><div class="stat-s a">${(bear[bear.length-1]/inv).toFixed(1)}x</div></div>
-    <div class="stat"><div class="stat-l">Base ${Math.round(r*100)}%</div><div class="stat-v g">฿${Math.round(base[base.length-1]/1000).toLocaleString()}K</div><div class="stat-s g">${(base[base.length-1]/inv).toFixed(1)}x</div></div>
-    <div class="stat"><div class="stat-l">Bull ${Math.round(r*100)+6}%</div><div class="stat-v p">฿${Math.round(bull[bull.length-1]/1000).toLocaleString()}K</div><div class="stat-s p">${(bull[bull.length-1]/inv).toFixed(1)}x</div></div>`;
-  if(btL)btL.destroy();
-  btL=new Chart(document.getElementById('btLine'),{type:'line',
-    data:{labels:lbl,datasets:[
-      {label:'Bull',data:bull,borderColor:'#00d68f',borderWidth:2,pointRadius:0,fill:false,tension:.3,borderDash:[6,3]},
-      {label:'Base',data:base,borderColor:'#8b7fff',borderWidth:2.5,pointRadius:3,fill:false,tension:.3},
-      {label:'Bear',data:bear,borderColor:'#f5a623',borderWidth:1.5,pointRadius:0,fill:false,tension:.3,borderDash:[3,3]},
-      {label:'ลงทุน',data:lbl.map((_,i)=>Math.round(inv*(i/yrs))),borderColor:'#333',borderWidth:1,pointRadius:0,fill:false,borderDash:[2,4]}
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      plugins:{legend:{display:true,position:'top',labels:{color:'#666',font:{size:10},boxWidth:12,padding:8}}},
-      scales:{x:{ticks:{color:'#444',font:{size:9},maxTicksLimit:8},grid:{color:'rgba(255,255,255,0.03)'}},
-              y:{ticks:{color:'#444',font:{size:9},callback:v=>'฿'+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.03)'}}}}
-  });
-  if(btB)btB.destroy();
-  btB=new Chart(document.getElementById('btBar'),{type:'bar',
-    data:{labels:['ลงทุน','Bear 6%','Base '+Math.round(r*100)+'%','Bull '+(Math.round(r*100)+6)+'%'],
-      datasets:[{data:[inv,bear[bear.length-1],base[base.length-1],bull[bull.length-1]],
-        backgroundColor:['#1a1a1a','rgba(245,166,35,.6)','rgba(139,127,255,.6)','rgba(0,214,143,.6)'],
-        borderColor:['#333','#f5a623','#8b7fff','#00d68f'],borderWidth:1,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},
-      scales:{x:{ticks:{color:'#555',font:{size:10}},grid:{display:false}},
-              y:{ticks:{color:'#444',font:{size:9},callback:v=>'฿'+Math.round(v/1000)+'K'},grid:{color:'rgba(255,255,255,0.03)'}}}}
-  });
+function renderPortfolioSelector() {
+  const sel = document.getElementById('portSelector');
+  sel.innerHTML = portfolios.map((p, i) => `<option value="${i}" ${i===activeIdx?'selected':''}>${p.name}</option>`).join('');
 }
+
+function addAsset() {
+  const sym = document.getElementById('portTicker').value.trim().toUpperCase();
+  const amt = parseFloat(document.getElementById('portAmount').value);
+  const cur = document.getElementById('portCurrency').value;
+  if(!sym || isNaN(amt)) return;
+  portfolios[activeIdx].assets.push({sym, amt, cur, d: getSK(sym)});
+  renderPortfolio();
+  savePortfolios();
+}
+
+function removeAsset(idx) { portfolios[activeIdx].assets.splice(idx, 1); renderPortfolio(); savePortfolios(); }
+
+function renderPortfolio() {
+  const p = portfolios[activeIdx];
+  let total = 0;
+  document.getElementById('pbPos').textContent = p.assets.length;
+  document.getElementById('pbRows').innerHTML = p.assets.length ? p.assets.map((a, i) => {
+    total += a.amt;
+    return `
+      <div class="h-row" style="grid-template-columns: 80px 1fr 100px 80px 40px;">
+        <div class="sym">${a.sym}</div>
+        <div class="co">${a.d.name}</div>
+        <div class="mn">${a.amt.toLocaleString()} ${a.cur}</div>
+        <div class="mn">${a.d.price}</div>
+        <div><button class="rm" onclick="removeAsset(${i})">×</button></div>
+      </div>`;
+  }).join('') : '<div class="empty">ยังไม่มีรายการ</div>';
+  
+  document.getElementById('pbTotalVal').textContent = (p.currency === 'THB' ? '฿' : '$') + total.toLocaleString();
+  renderPortfolioSelector();
+}
+
+// ── CRYPTO REAL-TIME SYNC ──
+// ให้ Crypto Screener ดึงข้อมูลจากฐานข้อมูลที่เรา Fetch มาตอนแรก
+function updateCryptoDisplay() {
+    Object.keys(CRYPTOS).forEach(sym => {
+        const el = document.querySelector(`.cc [data-sym="${sym}"]`);
+        // หรือถ้าอยากให้แสดงข้อมูลแบบ Real-time ให้เรียกใช้ฟังก์ชันอัปเดต DOM ที่นี่
+    });
+}
+// เรียกใช้ใน startRealTimeCrypto แล้ว (มีอยู่แล้วในโค้ดเก่าของคุณ)
+
+// Initialize
+renderPortfolio();
 runBT();
   // ── REAL-TIME CRYPTO ENGINE (BINANCE) ──
 async function startRealTimeCrypto() {
