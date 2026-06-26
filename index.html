@@ -679,14 +679,25 @@ const DB={
   SPCX:{name:'SpaceX Corp',price:'$165.78',chg:'-8.9%',p:false,mom:55,val:18,qual:70,grow:88,sec:'Space · AI'},
   CRWD:{name:'CrowdStrike',price:'$385.20',chg:'+2.1%',p:true,mom:79,val:22,qual:82,grow:90,sec:'Cybersecurity'},
 };
+
 function getSK(sym){
-  const s=sym.toUpperCase();if(DB[s])return DB[s];
+  const s=sym.toUpperCase();
+  if(DB[s]){
+    const basePrice = parseFloat(DB[s].price.replace('$','').replace(',',''));
+    const fv = basePrice * (1 + (DB[s].val - 50) / 100);
+    return {...DB[s], rawPrice: basePrice, fv: fv};
+  }
   const seed=s.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
   const r=(mn,mx,o=0)=>mn+((seed+o)%(mx-mn));
-  return{name:s+' Corp',price:'$'+((seed%500)+50)+'.'+((seed*7)%99).toString().padStart(2,'0'),
+  const rawPrice = ((seed%500)+50) + ((seed*7)%99)/100;
+  const fvRatio = 0.7 + ((seed % 60) / 100);
+  const fv = rawPrice * fvRatio;
+
+  return{name:s+' Corp',price:'$'+rawPrice.toFixed(2), rawPrice: rawPrice, fv: fv,
     chg:(seed%3===0?'-':'+')+((seed%8)+1)+'.'+((seed*3)%9)+'%',p:seed%3!==0,
     mom:r(20,95),val:r(15,90,10),qual:r(40,95,20),grow:r(20,92,30),sec:'Equity'};
 }
+
 function fc(v){return v>=75?'var(--green)':v>=50?'var(--amber)':'var(--red)';}
 function os(d){return Math.round(d.mom*.3+d.val*.25+d.qual*.3+d.grow*.15);}
 function vd(sc){
@@ -700,37 +711,90 @@ function vd(sc){
 let perfCI=null;const wl=[];
 function analyzeStock(){
   const sym=document.getElementById('stkInput').value.trim().toUpperCase();if(!sym)return;
-  const d=getSK(sym);const sc=os(d);const v=vd(sc);
+  const d=getSK(sym);
+  
+  // ซิงค์ราคาล่าสุดจาก Ticker บาร์ (ถ้ามี)
+  let currentPrice = d.rawPrice;
+  document.querySelectorAll('.tc').forEach(tc => {
+    if(tc.querySelector('.s').textContent === sym) {
+      const livePriceStr = tc.querySelector('.v').textContent;
+      currentPrice = parseFloat(livePriceStr.replace('$','').replace(',',''));
+      d.price = livePriceStr;
+      const liveChg = tc.querySelector('.c').textContent;
+      d.chg = liveChg;
+      d.p = !liveChg.includes('-');
+    }
+  });
+
+  const sc=os(d);const v=vd(sc);
   document.getElementById('stkResult').style.display='block';
   document.getElementById('rTicker').textContent=sym;
   document.getElementById('rName').textContent=d.name+' · '+d.sec;
   document.getElementById('rPrice').textContent=d.price;
+  
   const ce=document.getElementById('rChg');ce.textContent=d.chg;ce.className='p-chg '+(d.p?'g':'r');
   const arc=document.getElementById('scoreArc');
   setTimeout(()=>{arc.style.strokeDashoffset=138.2-(138.2*sc/100);arc.style.stroke=sc>=65?'var(--green)':sc>=45?'var(--amber)':'var(--red)';},50);
+  
   document.getElementById('scoreTxt').textContent=sc;
   document.getElementById('scoreTxt').style.color=sc>=65?'var(--green)':sc>=45?'var(--amber)':'var(--red)';
+  
   [['fMom','bMom',d.mom],['fVal','bVal',d.val],['fQual','bQual',d.qual],['fGrow','bGrow',d.grow]].forEach(([fi,bi,val])=>{
     document.getElementById(fi).textContent=val;document.getElementById(fi).style.color=fc(val);
     setTimeout(()=>{document.getElementById(bi).style.width=val+'%';document.getElementById(bi).style.background=fc(val);},100);
   });
+
+  // ── ASA FAIR VALUE COMPONENT LOGIC ──
+  document.getElementById('fvCurrent').textContent = d.price;
+  document.getElementById('fvTarget').textContent = '$' + d.fv.toFixed(2);
+  
+  const mos = ((d.fv - currentPrice) / d.fv) * 100;
+  let mosTxt = '';
+  let markerPos = 50; 
+  
+  if (mos > 5) {
+    document.getElementById('fvBadge').className = 'pill p-buy';
+    document.getElementById('fvBadge').textContent = 'UNDERVALUED';
+    mosTxt = `ราคาถูกกว่ามูลค่าที่แท้จริง <strong class="g">${mos.toFixed(1)}%</strong> (Discount)`;
+    markerPos = 50 - Math.min((mos / 30) * 50, 50); 
+    document.getElementById('fvMarker').style.background = 'var(--green)';
+  } else if (mos < -5) {
+    document.getElementById('fvBadge').className = 'pill p-sell';
+    document.getElementById('fvBadge').textContent = 'OVERVALUED';
+    mosTxt = `ราคาแพงกว่ามูลค่าที่แท้จริง <strong class="r">${Math.abs(mos).toFixed(1)}%</strong> (Premium)`;
+    markerPos = 50 + Math.min((Math.abs(mos) / 30) * 50, 50); 
+    document.getElementById('fvMarker').style.background = 'var(--red)';
+  } else {
+    document.getElementById('fvBadge').className = 'pill p-hold';
+    document.getElementById('fvBadge').textContent = 'FAIR VALUE';
+    mosTxt = `ราคาปัจจุบันใกล้เคียงกับมูลค่าที่แท้จริง`;
+    document.getElementById('fvMarker').style.background = 'var(--amber)';
+  }
+  setTimeout(() => { document.getElementById('fvMarker').style.left = markerPos + '%'; }, 100);
+  document.getElementById('fvMoSText').innerHTML = mosTxt;
+
+  // SIGNALS
   const sigs=[];
   if(d.mom>=70)sigs.push({t:'Momentum ✓',c:'p-buy'});
   if(d.val>=65)sigs.push({t:'Value ✓',c:'p-buy'});
   if(d.qual>=80)sigs.push({t:'Quality ✓',c:'p-buy'});
   if(d.grow>=75)sigs.push({t:'Growth ✓',c:'p-buy'});
+  if(mos>10)sigs.push({t:'Deep Discount',c:'p-buy'}); 
+  if(mos<-10)sigs.push({t:'Overpriced',c:'p-sell'});  
   if(d.mom<45)sigs.push({t:'Weak momentum',c:'p-sell'});
-  if(d.val<30)sigs.push({t:'Expensive',c:'p-hold'});
   if(!sigs.length)sigs.push({t:'Neutral',c:'p-hold'});
+  
   document.getElementById('sigRow').innerHTML=sigs.map(s=>`<span class="sig pill ${s.c}">${s.t}</span>`).join('');
   document.getElementById('vBadge').textContent=v.t;document.getElementById('vBadge').className='vb pill '+v.c;
   document.getElementById('vNote').textContent=v.n;
+  
   const seed=sym.split('').reduce((a,c)=>a+c.charCodeAt(0),0);
   const pts=Array.from({length:20},(_,i)=>{const base=100+d.mom*.3;return+(base+Math.sin(i*seed*.3)*8+Math.cos(i*.7)*5+(d.mom>60?i*.4:-i*.2)).toFixed(2);});
   if(perfCI)perfCI.destroy();
   perfCI=new Chart(document.getElementById('perfChart'),{type:'line',data:{labels:pts.map(()=>''),datasets:[{data:pts,borderColor:d.p?'#00d68f':'#ff4d4d',borderWidth:2,pointRadius:0,fill:true,backgroundColor:d.p?'rgba(0,214,143,0.07)':'rgba(255,77,77,0.07)',tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}}});
   if(!wl.find(w=>w.sym===sym)){wl.unshift({sym,d,sc,v});renderWL();}
 }
+
 function renderWL(){
   if(!wl.length){document.getElementById('wlBody').innerHTML='<tr><td colspan="7" style="text-align:center;padding:18px;color:var(--m1)">Search stocks to build watchlist</td></tr>';return;}
   document.getElementById('wlBody').innerHTML=wl.map(w=>`<tr>
